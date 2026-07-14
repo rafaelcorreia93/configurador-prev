@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 
 import logoVivest from "../assets/images/logo-vivest.svg"
+import { ConfigurationDialog } from "@/components/configurations/configuration-dialog"
 import { PlanFormDialog } from "@/components/plans/plan-form-dialog"
 import { PlansList } from "@/components/plans/plans-list"
 import { Badge } from "@/components/ui/badge"
@@ -37,6 +38,7 @@ function App() {
   const [totalPlanos, setTotalPlanos] = useState(0)
   const [totalConfiguracoes, setTotalConfiguracoes] = useState(0)
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false)
+  const [configurationPlan, setConfigurationPlan] = useState<Plano | null>(null)
 
   const loadCatalog = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -187,7 +189,11 @@ function App() {
         )}
 
         <section className="mt-8">
-          <PlansList planos={planos} loading={catalogStatus === "loading"} />
+          <PlansList
+            planos={planos}
+            loading={catalogStatus === "loading"}
+            onConfigure={setConfigurationPlan}
+          />
         </section>
       </main>
 
@@ -197,6 +203,15 @@ function App() {
         unidades={unidades}
         onUnidadeCreated={handleUnidadeCreated}
         onPlanoCreated={() => loadCatalog()}
+      />
+
+      <ConfigurationDialog
+        plano={configurationPlan}
+        open={configurationPlan !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setConfigurationPlan(null)
+        }}
+        onSaved={() => loadCatalog()}
       />
     </div>
   )

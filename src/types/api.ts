@@ -38,3 +38,41 @@ export type HealthResponse = {
     ready: boolean
   }
 }
+
+export type ModeloContribuicao =
+  | "percentual_livre"
+  | "fatias_aditivas"
+  | "idade_tempo_servico"
+  | "multiplicador_formula"
+
+export type RegraFaixa = {
+  id: string
+  ordem: number
+  limiteInferior: number
+  limiteSuperior: number | null
+  minPercentual: number | null
+  maxPercentual: number | null
+  percentualFixo: number | null
+  criterioSoma: { variaveis?: string[] } | null
+  descricao: string | null
+}
+
+export type ConfiguracaoContribuicao = {
+  id: string
+  planoId: string
+  tipo: string
+  modelo: ModeloContribuicao
+  tipoCalculo: string
+  variavelReferencia: string
+  numParcelasAnuais: number
+  proporcaoPatrocinador: number
+  limiteMaximoPatrocinador: number | null
+  ativo: boolean
+  criadoEm: string
+  atualizadoEm: string
+  regras: RegraFaixa[]
+}
+
+export type ConfiguracoesResponse = {
+  data: ConfiguracaoContribuicao[]
+}

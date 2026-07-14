@@ -5,7 +5,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Plano } from "@/types/api"
 
-export function PlansList({ planos, loading }: { planos: Plano[]; loading: boolean }) {
+export function PlansList({
+  planos,
+  loading,
+  onConfigure,
+}: {
+  planos: Plano[]
+  loading: boolean
+  onConfigure: (plano: Plano) => void
+}) {
   if (loading) {
     return (
       <Card className="border-dashed">
@@ -66,9 +74,9 @@ export function PlansList({ planos, loading }: { planos: Plano[]; loading: boole
               </div>
             </dl>
 
-            <Button className="mt-5 w-full" variant="outline" disabled title="Disponível na próxima entrega">
+            <Button className="mt-5 w-full" variant="outline" onClick={() => onConfigure(plano)}>
               <Settings2 className="size-4" aria-hidden="true" />
-              Configurar regras
+              {plano.configuracoesAtivas > 0 ? "Editar regras" : "Configurar regras"}
             </Button>
           </article>
         ))}
