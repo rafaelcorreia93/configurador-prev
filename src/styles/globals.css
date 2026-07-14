@@ -1,0 +1,163 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@font-face {
+  font-family: "Campton";
+  src: url("../../assets/fonts/Campton-Medium.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Campton";
+  src: url("../../assets/fonts/Campton-SemiBold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Open Sans";
+  src: url("../../assets/fonts/OpenSans.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Open Sans";
+  src: url("../../assets/fonts/OpenSans-SemiBold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+:root {
+  --vivest-font-family-heading: "Campton", sans-serif;
+  --vivest-font-family-body: "Open Sans", sans-serif;
+  --vivest-font-family-label: "Campton", sans-serif;
+  --vivest-font-weight-regular: 400;
+  --vivest-font-weight-medium: 500;
+  --vivest-font-weight-semibold: 600;
+  --vivest-font-weight-bold: 700;
+  --vivest-body-md-font-size: 16px;
+  --vivest-body-md-line-height: 32px;
+  --vivest-body-sm-font-size: 14px;
+  --vivest-body-sm-line-height: 32px;
+  --vivest-label-lg-font-size: 20px;
+  --vivest-label-md-font-size: 16px;
+  --vivest-label-sm-font-size: 14px;
+  --vivest-label-xs-font-size: 12px;
+
+  --vivest-color-text-heading: #000000;
+  --vivest-color-text-body: #5f5f5f;
+  --vivest-color-text-action: #3c2e88;
+  --vivest-color-text-action-hover: #6358a0;
+  --vivest-color-text-disabled: #5f5f5f;
+  --vivest-color-text-success: #1b894a;
+  --vivest-color-text-error: #e33e5a;
+  --vivest-color-text-warning: #9a7811;
+  --vivest-color-text-on-action: #ffffff;
+  --vivest-color-surface-page: #ffffff;
+  --vivest-color-surface-default: #ffffff;
+  --vivest-color-surface-action: #3c2e88;
+  --vivest-color-surface-action-hover: #6358a0;
+  --vivest-color-surface-disabled: #e3e3e3;
+  --vivest-color-surface-success: #e6faf1;
+  --vivest-color-surface-warning: #fefaeb;
+  --vivest-color-surface-information: #fefaeb;
+  --vivest-color-surface-action-error: #e33e5a;
+  --vivest-color-surface-action-error-hover: #e9657b;
+  --vivest-color-border-action: #3c2e88;
+  --vivest-color-border-focus: #3c2e88;
+  --vivest-color-border-error: #e33e5a;
+  --vivest-color-border-success: #1b894a;
+  --vivest-color-border-disabled: #e3e3e3;
+
+  --vivest-spacing-0: 0;
+  --vivest-spacing-1: 4px;
+  --vivest-spacing-2: 8px;
+  --vivest-spacing-3: 12px;
+  --vivest-spacing-4: 16px;
+  --vivest-spacing-5: 20px;
+  --vivest-spacing-6: 24px;
+  --vivest-spacing-7: 32px;
+  --vivest-spacing-8: 40px;
+  --vivest-spacing-9: 48px;
+  --vivest-spacing-10: 64px;
+  --vivest-radius-0: 0;
+  --vivest-radius-1: 4px;
+  --vivest-radius-2: 8px;
+  --vivest-radius-3: 12px;
+  --vivest-radius-4: 16px;
+  --vivest-radius-full: 9999px;
+
+  --background: var(--vivest-color-surface-page);
+  --foreground: var(--vivest-color-text-heading);
+  --card: var(--vivest-color-surface-default);
+  --card-foreground: var(--vivest-color-text-heading);
+  --primary: var(--vivest-color-surface-action);
+  --primary-foreground: var(--vivest-color-text-on-action);
+  --muted: var(--vivest-color-surface-disabled);
+  --muted-foreground: var(--vivest-color-text-body);
+  --border: var(--vivest-color-border-disabled);
+  --ring: var(--vivest-color-border-focus);
+  --success: var(--vivest-color-surface-success);
+  --success-foreground: var(--vivest-color-text-success);
+  --warning: var(--vivest-color-surface-warning);
+  --warning-foreground: var(--vivest-color-text-warning);
+  --action: var(--vivest-color-text-action);
+  --action-soft: color-mix(in srgb, var(--vivest-color-surface-action) 10%, transparent);
+}
+
+@theme inline {
+  --font-heading: var(--vivest-font-family-heading);
+  --font-body: var(--vivest-font-family-body);
+  --font-label: var(--vivest-font-family-label);
+  --color-page: var(--vivest-color-surface-page);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-action: var(--action);
+  --color-action-soft: var(--action-soft);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  font-family: var(--vivest-font-family-body);
+  background: var(--vivest-color-surface-page);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--vivest-color-surface-page);
+  color: var(--vivest-color-text-body);
+  font-size: var(--vivest-body-md-font-size);
+  line-height: var(--vivest-body-md-line-height);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
