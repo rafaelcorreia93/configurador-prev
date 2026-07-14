@@ -2,7 +2,10 @@ import { DatabaseConfigurationError, getSql } from "./_lib/database.js"
 
 const EXPECTED_TABLES = [
   "configuracoes_contribuicao",
+  "configuracao_renda",
+  "limites_pagamento",
   "planos",
+  "regras_aposentadoria",
   "regras_faixas",
   "unidades_referencia",
 ]

@@ -1,4 +1,4 @@
-import { FileSliders, Settings2 } from "lucide-react"
+import { FileSliders, HandCoins, Settings2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,10 +9,12 @@ export function PlansList({
   planos,
   loading,
   onConfigure,
+  onConfigureReceipt,
 }: {
   planos: Plano[]
   loading: boolean
   onConfigure: (plano: Plano) => void
+  onConfigureReceipt: (plano: Plano) => void
 }) {
   if (loading) {
     return (
@@ -44,7 +46,7 @@ export function PlansList({
     <Card>
       <CardHeader className="border-b border-border">
         <CardTitle>Planos cadastrados</CardTitle>
-        <CardDescription>Selecione um plano para consultar ou configurar suas regras de contribuição.</CardDescription>
+        <CardDescription>Selecione um plano para configurar contribuição ou recebimento do benefício.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4 p-6 md:grid-cols-2">
         {planos.map((plano) => (
@@ -74,10 +76,16 @@ export function PlansList({
               </div>
             </dl>
 
-            <Button className="mt-5 w-full" variant="outline" onClick={() => onConfigure(plano)}>
-              <Settings2 className="size-4" aria-hidden="true" />
-              {plano.configuracoesAtivas > 0 ? "Editar regras" : "Configurar regras"}
-            </Button>
+            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              <Button variant="outline" onClick={() => onConfigure(plano)}>
+                <Settings2 className="size-4" aria-hidden="true" />
+                Contribuição
+              </Button>
+              <Button variant="outline" onClick={() => onConfigureReceipt(plano)}>
+                <HandCoins className="size-4" aria-hidden="true" />
+                {plano.recebimentoConfigurado ? "Editar recebimento" : "Recebimento"}
+              </Button>
+            </div>
           </article>
         ))}
       </CardContent>

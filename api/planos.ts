@@ -43,7 +43,16 @@ export async function GET() {
             'valorAtual', ur.valor_atual::text
           )
         END AS "unidadeReferencia",
-        COUNT(cc.id) FILTER (WHERE cc.ativo)::int AS "configuracoesAtivas"
+        COUNT(cc.id) FILTER (WHERE cc.ativo)::int AS "configuracoesAtivas",
+        (
+          EXISTS (
+            SELECT 1 FROM regras_aposentadoria ra
+            WHERE ra.plano_id = p.id AND ra.ativo = TRUE
+          ) AND EXISTS (
+            SELECT 1 FROM configuracao_renda cr
+            WHERE cr.plano_id = p.id AND cr.ativo = TRUE
+          )
+        ) AS "recebimentoConfigurado"
       FROM planos p
       LEFT JOIN unidades_referencia ur ON ur.id = p.unidade_referencia_id
       LEFT JOIN configuracoes_contribuicao cc ON cc.plano_id = p.id

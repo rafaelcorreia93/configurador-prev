@@ -15,6 +15,7 @@ export type Plano = {
   criadoEm: string
   unidadeReferencia: UnidadeReferencia | null
   configuracoesAtivas: number
+  recebimentoConfigurado: boolean
 }
 
 export type PlanosResponse = {
@@ -75,4 +76,50 @@ export type ConfiguracaoContribuicao = {
 
 export type ConfiguracoesResponse = {
   data: ConfiguracaoContribuicao[]
+}
+
+export type TipoAposentadoria = "normal" | "antecipada" | "proporcional"
+export type ModalidadeRenda = "percentual_saldo" | "prazo_determinado" | "valor_fixo"
+export type PeriodicidadeRecalculo = "mensal" | "anual"
+
+export type RegraAposentadoria = {
+  id: string
+  tipo: TipoAposentadoria
+  idadeMinima: number
+  carenciaVinculacaoMeses: number
+  exigeTerminoVinculo: boolean
+  formulaMinimaCustomizada: string | null
+  ativo: boolean
+}
+
+export type ModalidadeRendaConfigurada = {
+  id: string
+  modalidadeTipo: ModalidadeRenda
+  percentualRendaMin: number | null
+  percentualRendaMax: number | null
+  prazoMesesMin: number | null
+  prazoMesesMax: number | null
+  ativo: boolean
+}
+
+export type RegrasRecebimento = {
+  planoId: string
+  regrasAposentadoria: RegraAposentadoria[]
+  configuracaoRenda: {
+    permiteSaqueInicial: boolean
+    percentualMaxSaque: number | null
+    periodicidadeRecalculo: PeriodicidadeRecalculo
+    modalidades: ModalidadeRendaConfigurada[]
+  }
+  limitesPagamento: {
+    id?: string
+    rendaMensalMinimaUnidade: number | null
+    unidadeRendaMinima: string | null
+    quitacaoSaldoResidualValor: number | null
+    unidadeQuitacaoSaldo: string | null
+  }
+}
+
+export type RegrasRecebimentoResponse = {
+  data: RegrasRecebimento
 }

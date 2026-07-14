@@ -13,6 +13,7 @@ import logoVivest from "../assets/images/logo-vivest.svg"
 import { ConfigurationDialog } from "@/components/configurations/configuration-dialog"
 import { PlanFormDialog } from "@/components/plans/plan-form-dialog"
 import { PlansList } from "@/components/plans/plans-list"
+import { ReceiptRulesDialog } from "@/components/receipt-rules/receipt-rules-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,6 +32,7 @@ type CatalogStatus = "loading" | "ready" | "error"
 function App() {
   const [healthStatus, setHealthStatus] = useState<HealthStatus>("checking")
   const [availableTables, setAvailableTables] = useState<number | null>(null)
+  const [expectedTables, setExpectedTables] = useState(7)
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("loading")
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [planos, setPlanos] = useState<Plano[]>([])
@@ -39,6 +41,7 @@ function App() {
   const [totalConfiguracoes, setTotalConfiguracoes] = useState(0)
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false)
   const [configurationPlan, setConfigurationPlan] = useState<Plano | null>(null)
+  const [receiptPlan, setReceiptPlan] = useState<Plano | null>(null)
 
   const loadCatalog = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -66,6 +69,7 @@ function App() {
       try {
         const data = await apiRequest<HealthResponse>("/api/health", { signal: controller.signal })
         setAvailableTables(data.schema.availableTables)
+        setExpectedTables(data.schema.expectedTables)
         setHealthStatus(data.database === "connected" ? "connected" : "unavailable")
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return
@@ -87,7 +91,7 @@ function App() {
     },
     connected: {
       label: "Banco conectado",
-      description: `${availableTables ?? 0} de 4 tabelas essenciais disponíveis.`,
+      description: `${availableTables ?? 0} de ${expectedTables} tabelas essenciais disponíveis.`,
       icon: <CircleCheck className="size-4" aria-hidden="true" />,
       variant: "success" as const,
     },
@@ -132,10 +136,10 @@ function App() {
           <div className="max-w-3xl">
             <p className="mb-2 font-label text-sm font-semibold text-action">PREVIDÊNCIA COMPLEMENTAR</p>
             <h1 className="font-heading text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
-              Planos de contribuição
+              Planos de previdência
             </h1>
             <p className="mt-4 max-w-2xl text-base leading-8 text-muted-foreground">
-              Parametrize regras de contribuição para diferentes regulamentos sem alterar o código da aplicação.
+              Parametrize as regras de contribuição e recebimento de diferentes regulamentos sem alterar o código da aplicação.
             </p>
           </div>
           <Button onClick={() => setIsPlanDialogOpen(true)}>
@@ -193,6 +197,7 @@ function App() {
             planos={planos}
             loading={catalogStatus === "loading"}
             onConfigure={setConfigurationPlan}
+            onConfigureReceipt={setReceiptPlan}
           />
         </section>
       </main>
@@ -210,6 +215,15 @@ function App() {
         open={configurationPlan !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setConfigurationPlan(null)
+        }}
+        onSaved={() => loadCatalog()}
+      />
+
+      <ReceiptRulesDialog
+        plano={receiptPlan}
+        open={receiptPlan !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setReceiptPlan(null)
         }}
         onSaved={() => loadCatalog()}
       />
