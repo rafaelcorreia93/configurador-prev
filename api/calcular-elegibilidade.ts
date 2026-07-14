@@ -11,7 +11,7 @@ import { DatabaseConfigurationError, getSql } from "./_lib/database.js"
 import { errorResponse, readRequestBody, validationErrorResponse } from "./_lib/http.js"
 
 const eligibilitySchema = z.object({
-  planoId: z.string().uuid("Plano inválido."),
+  cod_plano: z.string().trim().min(1, "Informe o código do plano.").max(50),
   idade: z.number().int().min(0).max(120),
   tempoVinculacaoMeses: z.number().int().min(0),
   vinculoEncerrado: z.boolean(),
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
         ) AS "limitesPagamento"
       FROM planos p
       LEFT JOIN unidades_referencia ur ON ur.id = p.unidade_referencia_id
-      WHERE p.id = ${parsed.data.planoId}
+      WHERE UPPER(p.cod_plano) = UPPER(${parsed.data.cod_plano})
         AND p.ativo = TRUE
       LIMIT 1
     `
