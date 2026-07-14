@@ -48,6 +48,7 @@ const incomeOptions: IncomeOption[] = [
 const paymentLimits: PaymentLimits = {
   rendaMensalMinimaUnidade: 1,
   unidadeRendaMinima: "UR",
+  valorAtualUnidadeReferencia: 500,
   quitacaoSaldoResidualValor: 5,
   unidadeQuitacaoSaldo: "UR",
 }
@@ -55,7 +56,7 @@ const paymentLimits: PaymentLimits = {
 describe("calculateEligibility", () => {
   it("considera elegível quando todos os requisitos mínimos são atendidos", () => {
     const result = calculateEligibility(
-      { idade: 60, tempoVinculacaoMeses: 60, vinculoEncerrado: true },
+      { idade: 60, tempoVinculacaoMeses: 60, vinculoEncerrado: true, saldoConta: 200_000 },
       [normalRule],
       incomeOptions,
       paymentLimits,
@@ -68,8 +69,17 @@ describe("calculateEligibility", () => {
       saqueInicial: { permitido: true, percentualMaximo: 25 },
       modalidades: [
         expect.objectContaining({ tipo: "percentual_saldo" }),
-        expect.objectContaining({ tipo: "valor_fixo", percentualMaxSaldoValorFixo: 3 }),
+        expect.objectContaining({
+          tipo: "valor_fixo",
+          percentualMaxSaldoValorFixo: 3,
+          valorMensalMinimo: 500,
+          valorMensalMaximo: 6_000,
+        }),
       ],
+    })
+    expect(result.opcoesRecebimento.limitesPagamento).toMatchObject({
+      rendaMensalMinimaValor: 500,
+      valorAtualUnidadeReferencia: 500,
     })
   })
 

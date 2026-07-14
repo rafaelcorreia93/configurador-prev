@@ -23,6 +23,7 @@ export type IncomeOption = {
 export type PaymentLimits = {
   rendaMensalMinimaUnidade: number | null
   unidadeRendaMinima: string | null
+  valorAtualUnidadeReferencia: number | null
   quitacaoSaldoResidualValor: number | null
   unidadeQuitacaoSaldo: string | null
 }
@@ -280,6 +281,13 @@ export function calculateEligibility(
 
   const anyEligible = eligibility.some((result) => result.elegivel)
   const firstIncomeOption = incomeOptions[0]
+  const minimumMonthlyAmount =
+    paymentLimits.rendaMensalMinimaUnidade !== null &&
+    paymentLimits.valorAtualUnidadeReferencia !== null
+      ? roundMoney(
+          paymentLimits.rendaMensalMinimaUnidade * paymentLimits.valorAtualUnidadeReferencia,
+        )
+      : null
 
   return {
     elegivelEmAlgumaModalidade: anyEligible,
@@ -291,15 +299,34 @@ export function calculateEligibility(
         percentualMaximo: firstIncomeOption?.percentualMaxSaque ?? null,
       },
       periodicidadeRecalculo: firstIncomeOption?.periodicidadeRecalculo ?? null,
-      modalidades: incomeOptions.map((option) => ({
-        tipo: option.modalidadeTipo,
-        percentualRendaMin: option.percentualRendaMin,
-        percentualRendaMax: option.percentualRendaMax,
-        percentualMaxSaldoValorFixo: option.percentualMaxSaldoValorFixo,
-        prazoMesesMin: option.prazoMesesMin,
-        prazoMesesMax: option.prazoMesesMax,
-      })),
-      limitesPagamento: paymentLimits,
+      modalidades: incomeOptions.map((option) => {
+        const isFixedAmount = option.modalidadeTipo === "valor_fixo"
+        const maximumMonthlyAmount =
+          isFixedAmount &&
+          input.saldoConta !== undefined &&
+          option.percentualMaxSaldoValorFixo !== null
+            ? roundMoney(input.saldoConta * (option.percentualMaxSaldoValorFixo / 100))
+            : null
+
+        return {
+          tipo: option.modalidadeTipo,
+          percentualRendaMin: option.percentualRendaMin,
+          percentualRendaMax: option.percentualRendaMax,
+          percentualMaxSaldoValorFixo: option.percentualMaxSaldoValorFixo,
+          prazoMesesMin: option.prazoMesesMin,
+          prazoMesesMax: option.prazoMesesMax,
+          valorMensalMinimo: isFixedAmount ? minimumMonthlyAmount : null,
+          valorMensalMaximo: isFixedAmount ? maximumMonthlyAmount : null,
+        }
+      }),
+      limitesPagamento: {
+        rendaMensalMinimaUnidade: paymentLimits.rendaMensalMinimaUnidade,
+        unidadeRendaMinima: paymentLimits.unidadeRendaMinima,
+        valorAtualUnidadeReferencia: paymentLimits.valorAtualUnidadeReferencia,
+        rendaMensalMinimaValor: minimumMonthlyAmount,
+        quitacaoSaldoResidualValor: paymentLimits.quitacaoSaldoResidualValor,
+        unidadeQuitacaoSaldo: paymentLimits.unidadeQuitacaoSaldo,
+      },
     },
   }
 }

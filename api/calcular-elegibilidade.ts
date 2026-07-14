@@ -94,6 +94,7 @@ export async function POST(request: Request) {
                 WHEN lp.renda_mensal_minima_unidade IS NULL THEN NULL
                 ELSE ur.sigla
               END,
+              'valorAtualUnidadeReferencia', ur.valor_atual::float8,
               'quitacaoSaldoResidualValor', lp.quitacao_saldo_residual_valor::float8,
               'unidadeQuitacaoSaldo', CASE
                 WHEN lp.quitacao_saldo_residual_valor IS NULL THEN NULL
@@ -106,6 +107,7 @@ export async function POST(request: Request) {
           json_build_object(
             'rendaMensalMinimaUnidade', NULL,
             'unidadeRendaMinima', NULL,
+            'valorAtualUnidadeReferencia', ur.valor_atual::float8,
             'quitacaoSaldoResidualValor', NULL,
             'unidadeQuitacaoSaldo', NULL
           )
