@@ -20,6 +20,7 @@ function validPayload() {
         modalidadeTipo: "percentual_saldo",
         percentualRendaMin: 0.1,
         percentualRendaMax: 2.5,
+        percentualMaxSaldoValorFixo: null,
         prazoMesesMin: null,
         prazoMesesMax: null,
       }],
@@ -56,6 +57,20 @@ describe("receiptRulesSchema", () => {
   it("exige valor e unidade em conjunto nos limites", () => {
     const payload = validPayload()
     payload.limitesPagamento.unidadeRendaMinima = null as unknown as string
+
+    expect(receiptRulesSchema.safeParse(payload).success).toBe(false)
+  })
+
+  it("exige limite sobre o saldo para a modalidade de valor fixo", () => {
+    const payload = validPayload()
+    payload.configuracaoRenda.modalidades = [{
+      modalidadeTipo: "valor_fixo",
+      percentualRendaMin: null as unknown as number,
+      percentualRendaMax: null as unknown as number,
+      percentualMaxSaldoValorFixo: null,
+      prazoMesesMin: null,
+      prazoMesesMax: null,
+    }]
 
     expect(receiptRulesSchema.safeParse(payload).success).toBe(false)
   })

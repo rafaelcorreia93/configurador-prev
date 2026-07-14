@@ -178,6 +178,7 @@ CREATE TABLE configuracao_renda (
     modalidade_tipo modalidade_renda_enum NOT NULL,
     percentual_renda_min NUMERIC(9, 6) NULL,
     percentual_renda_max NUMERIC(9, 6) NULL,
+    percentual_max_saldo_valor_fixo NUMERIC(9, 6) NULL,
     prazo_meses_min INTEGER NULL,
     prazo_meses_max INTEGER NULL,
     periodicidade_recalculo periodicidade_recalculo_enum NOT NULL DEFAULT 'anual',
@@ -199,6 +200,17 @@ CREATE TABLE configuracao_renda (
     CONSTRAINT ck_configuracao_renda_percentual_saldo CHECK (
         modalidade_tipo <> 'percentual_saldo' OR
         (percentual_renda_min IS NOT NULL AND percentual_renda_max IS NOT NULL)
+    ),
+    CONSTRAINT ck_configuracao_renda_limite_valor_fixo CHECK (
+        (
+            modalidade_tipo = 'valor_fixo' AND
+            percentual_max_saldo_valor_fixo IS NOT NULL AND
+            percentual_max_saldo_valor_fixo > 0 AND
+            percentual_max_saldo_valor_fixo <= 100
+        ) OR (
+            modalidade_tipo <> 'valor_fixo' AND
+            percentual_max_saldo_valor_fixo IS NULL
+        )
     ),
     CONSTRAINT ck_configuracao_renda_prazos CHECK (
         (prazo_meses_min IS NULL AND prazo_meses_max IS NULL) OR

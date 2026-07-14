@@ -97,6 +97,7 @@ export type ModalidadeRendaConfigurada = {
   modalidadeTipo: ModalidadeRenda
   percentualRendaMin: number | null
   percentualRendaMax: number | null
+  percentualMaxSaldoValorFixo: number | null
   prazoMesesMin: number | null
   prazoMesesMax: number | null
   ativo: boolean

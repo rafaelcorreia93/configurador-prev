@@ -51,6 +51,7 @@ type IncomeDraft = {
   enabled: boolean
   percentualRendaMin: string
   percentualRendaMax: string
+  percentualMaxSaldoValorFixo: string
   prazoMesesMin: string
   prazoMesesMax: string
 }
@@ -298,7 +299,12 @@ export function ReceiptRulesDialog({
                         <div key={income.modalidadeTipo} className="rounded-[var(--vivest-radius-3)] border border-border p-4">
                           <CheckboxRow
                             checked={income.enabled}
-                            onChange={(checked) => updateIncome(income.modalidadeTipo, { enabled: checked })}
+                            onChange={(checked) => updateIncome(income.modalidadeTipo, {
+                              enabled: checked,
+                              ...(checked && income.modalidadeTipo === "valor_fixo" && !income.percentualMaxSaldoValorFixo
+                                ? { percentualMaxSaldoValorFixo: "1" }
+                                : {}),
+                            })}
                             label={option.label}
                             description={option.description}
                           />
@@ -334,6 +340,23 @@ export function ReceiptRulesDialog({
                               <Field label="Prazo máximo (meses)" htmlFor="term-max">
                                 <Input id="term-max" type="number" min="1" value={income.prazoMesesMax} onChange={(event) => updateIncome(income.modalidadeTipo, { prazoMesesMax: event.target.value })} required />
                               </Field>
+                            </div>
+                          )}
+                          {income.enabled && income.modalidadeTipo === "valor_fixo" && (
+                            <div className="mt-4 border-t border-border pt-4">
+                              <RangeField
+                                id="fixed-income-balance-limit"
+                                label="Percentual máximo do saldo"
+                                value={income.percentualMaxSaldoValorFixo}
+                                min={0.1}
+                                max={100}
+                                step={0.1}
+                                suffix="%"
+                                onChange={(value) => updateIncome(income.modalidadeTipo, { percentualMaxSaldoValorFixo: value })}
+                              />
+                              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                                Limita o valor fixo mensal escolhido pelo participante em relação ao saldo do plano.
+                              </p>
                             </div>
                           )}
                         </div>
@@ -486,7 +509,7 @@ function ReceiptSummary({ form }: { form: ReceiptDraft }) {
             <strong className="text-foreground">{INCOME_LABELS[income.modalidadeTipo]}:</strong>{" "}
             {income.modalidadeTipo === "percentual_saldo" && `de ${formatDraftNumber(income.percentualRendaMin)}% a ${formatDraftNumber(income.percentualRendaMax)}% do saldo.`}
             {income.modalidadeTipo === "prazo_determinado" && `de ${formatDraftNumber(income.prazoMesesMin)} a ${formatDraftNumber(income.prazoMesesMax)} meses.`}
-            {income.modalidadeTipo === "valor_fixo" && "valor mensal definido pelo participante."}
+            {income.modalidadeTipo === "valor_fixo" && `valor mensal definido pelo participante, limitado a ${formatDraftNumber(income.percentualMaxSaldoValorFixo)}% do saldo.`}
           </SummaryParagraph>
         ))}
       </div>
@@ -646,6 +669,7 @@ function createBlankDraft(): ReceiptDraft {
       enabled: option.value === "percentual_saldo",
       percentualRendaMin: option.value === "percentual_saldo" ? "0.1" : "",
       percentualRendaMax: option.value === "percentual_saldo" ? "2.5" : "",
+      percentualMaxSaldoValorFixo: option.value === "valor_fixo" ? "1" : "",
       prazoMesesMin: option.value === "prazo_determinado" ? "120" : "",
       prazoMesesMax: option.value === "prazo_determinado" ? "360" : "",
     })),
@@ -681,6 +705,7 @@ function rulesToDraft(rules: RegrasRecebimento, plan: Plano): ReceiptDraft {
         enabled: true,
         percentualRendaMin: numberToDraft(saved.percentualRendaMin),
         percentualRendaMax: numberToDraft(saved.percentualRendaMax),
+        percentualMaxSaldoValorFixo: numberToDraft(saved.percentualMaxSaldoValorFixo),
         prazoMesesMin: numberToDraft(saved.prazoMesesMin),
         prazoMesesMax: numberToDraft(saved.prazoMesesMax),
       } : { ...draft, enabled: (rules.configuracaoRenda.modalidades?.length ?? 0) === 0 ? draft.enabled : false }
@@ -721,6 +746,9 @@ function draftToPayload(form: ReceiptDraft, planoId: string) {
           : null,
         percentualRendaMax: item.modalidadeTipo === "percentual_saldo"
           ? requiredNumber(item.percentualRendaMax, "percentual máximo da renda")
+          : null,
+        percentualMaxSaldoValorFixo: item.modalidadeTipo === "valor_fixo"
+          ? requiredNumber(item.percentualMaxSaldoValorFixo, "percentual máximo do saldo para o valor fixo")
           : null,
         prazoMesesMin: item.modalidadeTipo === "prazo_determinado"
           ? requiredNumber(item.prazoMesesMin, "prazo mínimo")

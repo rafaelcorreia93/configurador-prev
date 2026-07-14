@@ -19,6 +19,7 @@ const incomeModalitySchema = z.object({
   modalidadeTipo: z.enum(incomeTypes),
   percentualRendaMin: z.number().min(0).max(100).nullable(),
   percentualRendaMax: z.number().min(0).max(100).nullable(),
+  percentualMaxSaldoValorFixo: z.number().positive().max(100).nullable(),
   prazoMesesMin: z.number().int().positive().nullable(),
   prazoMesesMax: z.number().int().positive().nullable(),
 }).superRefine((data, context) => {
@@ -36,6 +37,22 @@ const incomeModalitySchema = z.object({
     } else if (data.prazoMesesMax < data.prazoMesesMin) {
       context.addIssue({ code: "custom", message: "O prazo máximo deve ser maior ou igual ao mínimo.", path: ["prazoMesesMax"] })
     }
+  }
+
+  if (data.modalidadeTipo === "valor_fixo" && data.percentualMaxSaldoValorFixo === null) {
+    context.addIssue({
+      code: "custom",
+      message: "Informe o percentual máximo do saldo para o valor fixo.",
+      path: ["percentualMaxSaldoValorFixo"],
+    })
+  }
+
+  if (data.modalidadeTipo !== "valor_fixo" && data.percentualMaxSaldoValorFixo !== null) {
+    context.addIssue({
+      code: "custom",
+      message: "O limite sobre o saldo é exclusivo da modalidade de valor fixo.",
+      path: ["percentualMaxSaldoValorFixo"],
+    })
   }
 })
 
@@ -137,6 +154,7 @@ export async function GET(request: Request) {
                     'modalidadeTipo', cr.modalidade_tipo,
                     'percentualRendaMin', cr.percentual_renda_min::float8,
                     'percentualRendaMax', cr.percentual_renda_max::float8,
+                    'percentualMaxSaldoValorFixo', cr.percentual_max_saldo_valor_fixo::float8,
                     'prazoMesesMin', cr.prazo_meses_min,
                     'prazoMesesMax', cr.prazo_meses_max,
                     'ativo', cr.ativo
@@ -221,6 +239,8 @@ export async function POST(request: Request) {
     percentual_max_saque: parsed.data.configuracaoRenda.percentualMaxSaque,
     percentual_renda_min: modality.modalidadeTipo === "percentual_saldo" ? modality.percentualRendaMin : null,
     percentual_renda_max: modality.modalidadeTipo === "percentual_saldo" ? modality.percentualRendaMax : null,
+    percentual_max_saldo_valor_fixo:
+      modality.modalidadeTipo === "valor_fixo" ? modality.percentualMaxSaldoValorFixo : null,
     prazo_meses_min: modality.modalidadeTipo === "prazo_determinado" ? modality.prazoMesesMin : null,
     prazo_meses_max: modality.modalidadeTipo === "prazo_determinado" ? modality.prazoMesesMax : null,
     periodicidade_recalculo: parsed.data.configuracaoRenda.periodicidadeRecalculo,
@@ -280,6 +300,7 @@ export async function POST(request: Request) {
           percentual_max_saque NUMERIC,
           percentual_renda_min NUMERIC,
           percentual_renda_max NUMERIC,
+          percentual_max_saldo_valor_fixo NUMERIC,
           prazo_meses_min INTEGER,
           prazo_meses_max INTEGER,
           periodicidade_recalculo TEXT
@@ -288,13 +309,14 @@ export async function POST(request: Request) {
       rendas_salvas AS (
         INSERT INTO configuracao_renda (
           plano_id, permite_saque_inicial, percentual_max_saque, modalidade_tipo,
-          percentual_renda_min, percentual_renda_max, prazo_meses_min,
+          percentual_renda_min, percentual_renda_max, percentual_max_saldo_valor_fixo, prazo_meses_min,
           prazo_meses_max, periodicidade_recalculo
         )
         SELECT
           plano.id, rendas_input.permite_saque_inicial, rendas_input.percentual_max_saque,
           rendas_input.modalidade_tipo::modalidade_renda_enum,
           rendas_input.percentual_renda_min, rendas_input.percentual_renda_max,
+          rendas_input.percentual_max_saldo_valor_fixo,
           rendas_input.prazo_meses_min, rendas_input.prazo_meses_max,
           rendas_input.periodicidade_recalculo::periodicidade_recalculo_enum
         FROM plano CROSS JOIN rendas_input
@@ -303,6 +325,7 @@ export async function POST(request: Request) {
           percentual_max_saque = EXCLUDED.percentual_max_saque,
           percentual_renda_min = EXCLUDED.percentual_renda_min,
           percentual_renda_max = EXCLUDED.percentual_renda_max,
+          percentual_max_saldo_valor_fixo = EXCLUDED.percentual_max_saldo_valor_fixo,
           prazo_meses_min = EXCLUDED.prazo_meses_min,
           prazo_meses_max = EXCLUDED.prazo_meses_max,
           periodicidade_recalculo = EXCLUDED.periodicidade_recalculo,
