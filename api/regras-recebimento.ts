@@ -160,9 +160,15 @@ export async function GET(request: Request) {
             SELECT json_build_object(
               'id', lp.id,
               'rendaMensalMinimaUnidade', lp.renda_mensal_minima_unidade::float8,
-              'unidadeRendaMinima', lp.unidade_renda_minima,
+              'unidadeRendaMinima', CASE
+                WHEN lp.renda_mensal_minima_unidade IS NULL THEN NULL
+                ELSE ur.sigla
+              END,
               'quitacaoSaldoResidualValor', lp.quitacao_saldo_residual_valor::float8,
-              'unidadeQuitacaoSaldo', lp.unidade_quitacao_saldo
+              'unidadeQuitacaoSaldo', CASE
+                WHEN lp.quitacao_saldo_residual_valor IS NULL THEN NULL
+                ELSE ur.sigla
+              END
             )
             FROM limites_pagamento lp
             WHERE lp.plano_id = p.id
@@ -175,6 +181,7 @@ export async function GET(request: Request) {
           )
         ) AS "limitesPagamento"
       FROM planos p
+      LEFT JOIN unidades_referencia ur ON ur.id = p.unidade_referencia_id
       WHERE p.id = ${parsedPlanoId.data}
       LIMIT 1
     `
@@ -223,7 +230,10 @@ export async function POST(request: Request) {
     const sql = getSql()
     const rows = await sql`
       WITH plano AS (
-        SELECT id FROM planos WHERE id = ${parsed.data.planoId}
+        SELECT p.id, ur.sigla AS unidade_sigla
+        FROM planos p
+        LEFT JOIN unidades_referencia ur ON ur.id = p.unidade_referencia_id
+        WHERE p.id = ${parsed.data.planoId}
       ),
       regras_input AS (
         SELECT *
@@ -316,9 +326,15 @@ export async function POST(request: Request) {
         SELECT
           plano.id,
           ${parsed.data.limitesPagamento.rendaMensalMinimaUnidade},
-          ${parsed.data.limitesPagamento.unidadeRendaMinima},
+          CASE
+            WHEN ${parsed.data.limitesPagamento.rendaMensalMinimaUnidade}::numeric IS NULL THEN NULL
+            ELSE plano.unidade_sigla
+          END,
           ${parsed.data.limitesPagamento.quitacaoSaldoResidualValor},
-          ${parsed.data.limitesPagamento.unidadeQuitacaoSaldo}
+          CASE
+            WHEN ${parsed.data.limitesPagamento.quitacaoSaldoResidualValor}::numeric IS NULL THEN NULL
+            ELSE plano.unidade_sigla
+          END
         FROM plano
         ON CONFLICT (plano_id) DO UPDATE SET
           renda_mensal_minima_unidade = EXCLUDED.renda_mensal_minima_unidade,
@@ -347,6 +363,10 @@ export async function POST(request: Request) {
 
     if (code === "23503") {
       return errorResponse("O plano informado não existe.", 400)
+    }
+
+    if (code === "23514") {
+      return errorResponse("Associe uma unidade de referência ao plano antes de configurar os limites de pagamento.", 400)
     }
 
     const message = error instanceof DatabaseConfigurationError

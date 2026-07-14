@@ -99,7 +99,7 @@ export function ReceiptRulesDialog({
         `/api/regras-recebimento?planoId=${encodeURIComponent(currentPlan.id)}`,
         { signal },
       )
-      setForm(rulesToDraft(response.data))
+      setForm(rulesToDraft(response.data, currentPlan))
       setStatus("ready")
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return
@@ -362,18 +362,61 @@ export function ReceiptRulesDialog({
                   />
                   <div className="grid gap-4 rounded-[var(--vivest-radius-3)] border border-border p-4 sm:grid-cols-2">
                     <Field label="Renda mensal mínima" htmlFor="minimum-income">
-                      <Input id="minimum-income" inputMode="decimal" value={form.rendaMensalMinimaUnidade} onChange={(event) => setForm((current) => ({ ...current, rendaMensalMinimaUnidade: event.target.value }))} placeholder="1" />
+                      <Input
+                        id="minimum-income"
+                        inputMode="decimal"
+                        value={form.rendaMensalMinimaUnidade}
+                        onChange={(event) => setForm((current) => ({
+                          ...current,
+                          rendaMensalMinimaUnidade: event.target.value,
+                          unidadeRendaMinima: event.target.value.trim()
+                            ? plano?.unidadeReferencia?.sigla ?? ""
+                            : "",
+                        }))}
+                        placeholder="1"
+                        disabled={!plano?.unidadeReferencia}
+                      />
                     </Field>
                     <Field label="Unidade da renda mínima" htmlFor="minimum-income-unit">
-                      <Input id="minimum-income-unit" value={form.unidadeRendaMinima} onChange={(event) => setForm((current) => ({ ...current, unidadeRendaMinima: event.target.value.toUpperCase() }))} placeholder="URMM" maxLength={20} />
+                      <UnitSelect
+                        id="minimum-income-unit"
+                        value={form.unidadeRendaMinima}
+                        plan={plano}
+                        required={Boolean(form.rendaMensalMinimaUnidade.trim())}
+                        onChange={(value) => setForm((current) => ({ ...current, unidadeRendaMinima: value }))}
+                      />
                     </Field>
                     <Field label="Limite para quitação do saldo" htmlFor="residual-balance">
-                      <Input id="residual-balance" inputMode="decimal" value={form.quitacaoSaldoResidualValor} onChange={(event) => setForm((current) => ({ ...current, quitacaoSaldoResidualValor: event.target.value }))} placeholder="5" />
+                      <Input
+                        id="residual-balance"
+                        inputMode="decimal"
+                        value={form.quitacaoSaldoResidualValor}
+                        onChange={(event) => setForm((current) => ({
+                          ...current,
+                          quitacaoSaldoResidualValor: event.target.value,
+                          unidadeQuitacaoSaldo: event.target.value.trim()
+                            ? plano?.unidadeReferencia?.sigla ?? ""
+                            : "",
+                        }))}
+                        placeholder="5"
+                        disabled={!plano?.unidadeReferencia}
+                      />
                     </Field>
                     <Field label="Unidade da quitação" htmlFor="residual-balance-unit">
-                      <Input id="residual-balance-unit" value={form.unidadeQuitacaoSaldo} onChange={(event) => setForm((current) => ({ ...current, unidadeQuitacaoSaldo: event.target.value.toUpperCase() }))} placeholder={plano?.unidadeReferencia?.sigla ?? "UR"} maxLength={20} />
+                      <UnitSelect
+                        id="residual-balance-unit"
+                        value={form.unidadeQuitacaoSaldo}
+                        plan={plano}
+                        required={Boolean(form.quitacaoSaldoResidualValor.trim())}
+                        onChange={(value) => setForm((current) => ({ ...current, unidadeQuitacaoSaldo: value }))}
+                      />
                     </Field>
                   </div>
+                  {!plano?.unidadeReferencia && (
+                    <p className="mt-3 rounded-[var(--vivest-radius-2)] bg-warning px-4 py-3 text-sm text-warning-foreground">
+                      Associe uma unidade de referência ao plano para configurar os limites de pagamento.
+                    </p>
+                  )}
                 </section>
               </div>
 
@@ -555,6 +598,36 @@ function Field({
   )
 }
 
+function UnitSelect({
+  id,
+  value,
+  plan,
+  required,
+  onChange,
+}: {
+  id: string
+  value: string
+  plan: Plano | null
+  required: boolean
+  onChange: (value: string) => void
+}) {
+  const unit = plan?.unidadeReferencia
+
+  return (
+    <select
+      id={id}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={selectClassName}
+      disabled={!unit}
+      required={required}
+    >
+      <option value="">{unit ? "Selecione a unidade" : "Plano sem unidade associada"}</option>
+      {unit && <option value={unit.sigla}>{unit.sigla} — Unidade do plano</option>}
+    </select>
+  )
+}
+
 function createBlankDraft(): ReceiptDraft {
   return {
     retirements: RETIREMENT_OPTIONS.map((option) => ({
@@ -583,8 +656,9 @@ function createBlankDraft(): ReceiptDraft {
   }
 }
 
-function rulesToDraft(rules: RegrasRecebimento): ReceiptDraft {
+function rulesToDraft(rules: RegrasRecebimento, plan: Plano): ReceiptDraft {
   const blank = createBlankDraft()
+  const planUnit = plan.unidadeReferencia?.sigla ?? ""
   return {
     retirements: blank.retirements.map((draft) => {
       const saved = rules.regrasAposentadoria.find((rule) => rule.tipo === draft.tipo)
@@ -612,9 +686,9 @@ function rulesToDraft(rules: RegrasRecebimento): ReceiptDraft {
       } : { ...draft, enabled: (rules.configuracaoRenda.modalidades?.length ?? 0) === 0 ? draft.enabled : false }
     }),
     rendaMensalMinimaUnidade: numberToDraft(rules.limitesPagamento.rendaMensalMinimaUnidade),
-    unidadeRendaMinima: rules.limitesPagamento.unidadeRendaMinima ?? "",
+    unidadeRendaMinima: rules.limitesPagamento.rendaMensalMinimaUnidade === null ? "" : planUnit,
     quitacaoSaldoResidualValor: numberToDraft(rules.limitesPagamento.quitacaoSaldoResidualValor),
-    unidadeQuitacaoSaldo: rules.limitesPagamento.unidadeQuitacaoSaldo ?? "",
+    unidadeQuitacaoSaldo: rules.limitesPagamento.quitacaoSaldoResidualValor === null ? "" : planUnit,
   }
 }
 
