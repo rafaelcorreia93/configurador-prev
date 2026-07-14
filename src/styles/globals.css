@@ -109,6 +109,8 @@
   --warning-foreground: var(--vivest-color-text-warning);
   --action: var(--vivest-color-text-action);
   --action-soft: color-mix(in srgb, var(--vivest-color-surface-action) 10%, transparent);
+  --error: var(--vivest-color-text-error);
+  --error-soft: color-mix(in srgb, var(--vivest-color-surface-action-error) 9%, transparent);
 }
 
 @theme inline {
@@ -132,6 +134,8 @@
   --color-warning-foreground: var(--warning-foreground);
   --color-action: var(--action);
   --color-action-soft: var(--action-soft);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
 }
 
 * {

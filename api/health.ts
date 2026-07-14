@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless"
+import { DatabaseConfigurationError, getSql } from "./_lib/database.js"
 
 const EXPECTED_TABLES = [
   "configuracoes_contribuicao",
@@ -8,21 +8,8 @@ const EXPECTED_TABLES = [
 ]
 
 export async function GET() {
-  const databaseUrl = process.env.DATABASE_URL
-
-  if (!databaseUrl) {
-    return Response.json(
-      {
-        status: "error",
-        database: "not_configured",
-        message: "DATABASE_URL não está configurada no ambiente da função.",
-      },
-      { status: 503 },
-    )
-  }
-
   try {
-    const sql = neon(databaseUrl)
+    const sql = getSql()
     const rows = await sql`
       SELECT COUNT(*)::int AS available_tables
       FROM information_schema.tables
@@ -42,13 +29,16 @@ export async function GET() {
     })
   } catch (error) {
     console.error("Falha ao consultar o Neon", error)
+    const notConfigured = error instanceof DatabaseConfigurationError
     return Response.json(
       {
         status: "error",
-        database: "unavailable",
-        message: "Não foi possível consultar o banco de dados.",
+        database: notConfigured ? "not_configured" : "unavailable",
+        message: notConfigured
+          ? "DATABASE_URL não está configurada no ambiente da função."
+          : "Não foi possível consultar o banco de dados.",
       },
-      { status: 500 },
+      { status: notConfigured ? 503 : 500 },
     )
   }
 }

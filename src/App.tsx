@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   CircleAlert,
   CircleCheck,
@@ -6,38 +6,63 @@ import {
   FileSliders,
   LoaderCircle,
   Plus,
+  RefreshCw,
 } from "lucide-react"
 
 import logoVivest from "../assets/images/logo-vivest.svg"
+import { PlanFormDialog } from "@/components/plans/plan-form-dialog"
+import { PlansList } from "@/components/plans/plans-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { apiRequest } from "@/lib/api"
+import type {
+  HealthResponse,
+  Plano,
+  PlanosResponse,
+  UnidadeReferencia,
+  UnidadesResponse,
+} from "@/types/api"
 
 type HealthStatus = "checking" | "connected" | "unavailable"
-
-type HealthResponse = {
-  status: "ok"
-  database: "connected"
-  schema: {
-    expectedTables: number
-    availableTables: number
-    ready: boolean
-  }
-}
+type CatalogStatus = "loading" | "ready" | "error"
 
 function App() {
   const [healthStatus, setHealthStatus] = useState<HealthStatus>("checking")
   const [availableTables, setAvailableTables] = useState<number | null>(null)
+  const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("loading")
+  const [catalogError, setCatalogError] = useState<string | null>(null)
+  const [planos, setPlanos] = useState<Plano[]>([])
+  const [unidades, setUnidades] = useState<UnidadeReferencia[]>([])
+  const [totalPlanos, setTotalPlanos] = useState(0)
+  const [totalConfiguracoes, setTotalConfiguracoes] = useState(0)
+  const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false)
+
+  const loadCatalog = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const [planosResponse, unidadesResponse] = await Promise.all([
+        apiRequest<PlanosResponse>("/api/planos", { signal }),
+        apiRequest<UnidadesResponse>("/api/unidades-referencia", { signal }),
+      ])
+
+      setPlanos(planosResponse.data)
+      setTotalPlanos(planosResponse.meta.totalPlanos)
+      setTotalConfiguracoes(planosResponse.meta.totalConfiguracoesAtivas)
+      setUnidades(unidadesResponse.data)
+      setCatalogStatus("ready")
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
+      setCatalogError(error instanceof Error ? error.message : "Não foi possível carregar os planos.")
+      setCatalogStatus("error")
+    }
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
 
     async function checkHealth() {
       try {
-        const response = await fetch("/api/health", { signal: controller.signal })
-        if (!response.ok) throw new Error("API indisponível")
-
-        const data = (await response.json()) as HealthResponse
+        const data = await apiRequest<HealthResponse>("/api/health", { signal: controller.signal })
         setAvailableTables(data.schema.availableTables)
         setHealthStatus(data.database === "connected" ? "connected" : "unavailable")
       } catch (error) {
@@ -47,8 +72,9 @@ function App() {
     }
 
     void checkHealth()
+    void Promise.resolve().then(() => loadCatalog(controller.signal))
     return () => controller.abort()
-  }, [])
+  }, [loadCatalog])
 
   const healthContent = {
     checking: {
@@ -64,12 +90,22 @@ function App() {
       variant: "success" as const,
     },
     unavailable: {
-      label: "Conexão pendente",
-      description: "A API será validada após o primeiro deploy na Vercel.",
+      label: "Conexão indisponível",
+      description: "Não foi possível consultar a API neste ambiente.",
       icon: <CircleAlert className="size-4" aria-hidden="true" />,
       variant: "warning" as const,
     },
   }[healthStatus]
+
+  function handleUnidadeCreated(unidade: UnidadeReferencia) {
+    setUnidades((current) => [...current, unidade].sort((a, b) => a.sigla.localeCompare(b.sigla)))
+  }
+
+  function handleRetryCatalog() {
+    setCatalogStatus("loading")
+    setCatalogError(null)
+    void loadCatalog()
+  }
 
   return (
     <div className="min-h-screen bg-page text-foreground">
@@ -100,36 +136,23 @@ function App() {
               Parametrize regras de contribuição para diferentes regulamentos sem alterar o código da aplicação.
             </p>
           </div>
-          <Button disabled title="Disponível na próxima etapa">
+          <Button onClick={() => setIsPlanDialogOpen(true)}>
             <Plus className="size-4" aria-hidden="true" />
             Cadastrar plano
           </Button>
         </section>
 
         <section className="grid gap-5 md:grid-cols-3" aria-label="Resumo do sistema">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between gap-4">
-              <div>
-                <CardDescription>Planos cadastrados</CardDescription>
-                <CardTitle className="mt-2 text-3xl">0</CardTitle>
-              </div>
-              <div className="grid size-11 place-items-center rounded-[var(--vivest-radius-2)] bg-action-soft text-action">
-                <FileSliders className="size-5" aria-hidden="true" />
-              </div>
-            </CardHeader>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex-row items-center justify-between gap-4">
-              <div>
-                <CardDescription>Configurações ativas</CardDescription>
-                <CardTitle className="mt-2 text-3xl">0</CardTitle>
-              </div>
-              <div className="grid size-11 place-items-center rounded-[var(--vivest-radius-2)] bg-action-soft text-action">
-                <FileSliders className="size-5" aria-hidden="true" />
-              </div>
-            </CardHeader>
-          </Card>
+          <SummaryCard
+            label="Planos cadastrados"
+            value={catalogStatus === "loading" ? "—" : String(totalPlanos)}
+            icon={<FileSliders className="size-5" aria-hidden="true" />}
+          />
+          <SummaryCard
+            label="Configurações ativas"
+            value={catalogStatus === "loading" ? "—" : String(totalConfiguracoes)}
+            icon={<FileSliders className="size-5" aria-hidden="true" />}
+          />
 
           <Card>
             <CardHeader className="flex-row items-center justify-between gap-4">
@@ -147,21 +170,51 @@ function App() {
           </Card>
         </section>
 
-        <section className="mt-8">
-          <Card className="border-dashed">
-            <CardContent className="flex min-h-72 flex-col items-center justify-center px-6 py-12 text-center">
-              <div className="mb-5 grid size-14 place-items-center rounded-[var(--vivest-radius-full)] bg-action-soft text-action">
-                <FileSliders className="size-6" aria-hidden="true" />
+        {catalogStatus === "error" && (
+          <div className="mt-8 flex flex-col gap-4 rounded-[var(--vivest-radius-3)] border border-error bg-error-soft p-4 sm:flex-row sm:items-center sm:justify-between" role="alert">
+            <div className="flex items-start gap-3">
+              <CircleAlert className="mt-1 size-5 shrink-0 text-error" aria-hidden="true" />
+              <div>
+                <p className="font-heading text-sm font-semibold text-foreground">Não foi possível carregar os dados</p>
+                <p className="mt-1 text-sm text-error">{catalogError}</p>
               </div>
-              <h2 className="font-heading text-2xl font-semibold text-foreground">Nenhum plano cadastrado</h2>
-              <p className="mt-3 max-w-lg text-sm leading-7 text-muted-foreground">
-                A estrutura inicial está pronta. Na próxima etapa, o cadastro permitirá associar unidades de referência e regras de contribuição a cada plano.
-              </p>
-            </CardContent>
-          </Card>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleRetryCatalog}>
+              <RefreshCw className="size-4" aria-hidden="true" />
+              Tentar novamente
+            </Button>
+          </div>
+        )}
+
+        <section className="mt-8">
+          <PlansList planos={planos} loading={catalogStatus === "loading"} />
         </section>
       </main>
+
+      <PlanFormDialog
+        open={isPlanDialogOpen}
+        onOpenChange={setIsPlanDialogOpen}
+        unidades={unidades}
+        onUnidadeCreated={handleUnidadeCreated}
+        onPlanoCreated={() => loadCatalog()}
+      />
     </div>
+  )
+}
+
+function SummaryCard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between gap-4">
+        <div>
+          <CardDescription>{label}</CardDescription>
+          <CardTitle className="mt-2 text-3xl">{value}</CardTitle>
+        </div>
+        <div className="grid size-11 place-items-center rounded-[var(--vivest-radius-2)] bg-action-soft text-action">
+          {icon}
+        </div>
+      </CardHeader>
+    </Card>
   )
 }
 
