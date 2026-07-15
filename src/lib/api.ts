@@ -1,3 +1,8 @@
+import type {
+  CalculoInvestimentoInput,
+  CalculoInvestimentoResponse,
+} from "@/types/api"
+
 type ApiErrorPayload = {
   message?: string
   details?: Record<string, string>
@@ -43,4 +48,11 @@ export async function apiRequest<T>(path: string, options?: RequestInit): Promis
   }
 
   return payload as T
+}
+
+export function calcularInvestimento(input: CalculoInvestimentoInput) {
+  return apiRequest<CalculoInvestimentoResponse>("/api/calcular-investimento", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
 }

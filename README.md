@@ -13,7 +13,15 @@ O servidor do Vite executa somente o frontend. Para validar as funções e as va
 
 ## Variáveis de ambiente
 
-O backend requer `DATABASE_URL`. Use `.env.example` como referência e nunca exponha a conexão com o prefixo `VITE_`.
+O backend requer `DATABASE_URL`. A integração de cálculo usa `auth_api_cpf`,
+`auth_api_password` e `OCP_API_CALCULO`. Use `.env.example` como referência e
+nunca exponha essas variáveis com o prefixo `VITE_`.
+
+## API de cálculo de investimento
+
+O endpoint `POST /api/calcular-investimento` autentica na Vivest e encaminha os
+dados abertos da simulação para a API de cálculo. A resposta mantém o contrato da
+API externa, pronta para ser consumida pelo futuro front de simulação.
 
 ## Validação
 

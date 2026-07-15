@@ -124,3 +124,49 @@ export type RegrasRecebimento = {
 export type RegrasRecebimentoResponse = {
   data: RegrasRecebimento
 }
+
+export type CalculoInvestimentoInput = {
+  vp?: number
+  basicaParticipante: number
+  basicaEmpresa: number
+  voluntariaParticipante?: number
+  voluntariaEmpresa?: number
+  r_anual: number
+  dataInicio: string
+  dataFim: string
+  pmt_extra?: number
+  freq_extra?: "12 meses"
+  considerar_decimo: boolean
+}
+
+export type CalculoInvestimentoResponse = {
+  success: boolean
+  valorFuturoTotal: number
+  detalhes: {
+    vfAporteInicial: number
+    vfBasicaParticipante: number
+    vfBasicaEmpresa: number
+    vfVoluntariaParticipante: number
+    vfVoluntariaEmpresa: number
+    vfAportesExtrasOpcionais: number
+  }
+  totaisAportes: {
+    aporteInicial: number
+    totalBasicaParticipante: number
+    totalBasicaEmpresa: number
+    totalVoluntariaParticipante: number
+    totalVoluntariaEmpresa: number
+    totalAportesExtrasOpcionais: number
+    totalAportadoSemRentabilidade: number
+  }
+  rentabilidade: {
+    valorRendimento: number
+    percentualSobreAportado: number
+  }
+  parametrosEntrada: Required<CalculoInvestimentoInput>
+  periodosCalculados: {
+    anosCompletos: number
+    mesesCompletos: number
+    decimosAplicados: number
+  }
+}
