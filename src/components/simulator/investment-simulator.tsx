@@ -34,6 +34,7 @@ type SimulationForm = {
   age: string
   salary: string
   annualReturn: string
+  retirementAge: string
 }
 
 const initialForm: SimulationForm = {
@@ -41,6 +42,7 @@ const initialForm: SimulationForm = {
   age: "",
   salary: "",
   annualReturn: "4",
+  retirementAge: "",
 }
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -71,6 +73,15 @@ function formatDate(value: string) {
 function parsePositiveNumber(value: string) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
+function calculateMinimumRetirementAge(age: number, rules: RegrasRecebimento | null) {
+  if (!rules || rules.regrasAposentadoria.length === 0) return age
+
+  return Math.floor(Math.min(...rules.regrasAposentadoria.map((rule) => Math.max(
+    rule.idadeMinima,
+    age + (rule.carenciaVinculacaoMeses / 12),
+  ))))
 }
 
 export function InvestmentSimulator({
@@ -111,6 +122,9 @@ export function InvestmentSimulator({
     const age = parsePositiveNumber(form.age)
     const salary = parsePositiveNumber(form.salary)
     const annualReturn = Number(form.annualReturn)
+    const informedRetirementAge = form.retirementAge === ""
+      ? null
+      : Number(form.retirementAge)
 
     if (!form.planCode || age === null || salary === null) {
       setError("Preencha o plano, a idade e o salário para continuar.")
@@ -132,11 +146,23 @@ export function InvestmentSimulator({
       return
     }
 
+    if (
+      informedRetirementAge !== null
+      && (!Number.isInteger(informedRetirementAge) || informedRetirementAge > 120)
+    ) {
+      setError("Informe uma idade de aposentadoria válida.")
+      return
+    }
+
     setIsSimulating(true)
     setError(null)
 
     try {
       const today = todayAsIsoDate()
+      const minimumRetirementAge = calculateMinimumRetirementAge(age, receiptRules)
+      const chosenRetirementAge = informedRetirementAge === null
+        ? undefined
+        : Math.max(informedRetirementAge, minimumRetirementAge)
       const [simulationOutcome, rulesOutcome] = await Promise.allSettled([
         simularInvestimento({
           cod_plano: form.planCode,
@@ -145,6 +171,7 @@ export function InvestmentSimulator({
           data_admissao: today,
           src: salary,
           rentabilidade_anual: annualReturn / 100,
+          idade_aposentadoria: chosenRetirementAge,
         }),
         obterRegrasRecebimento(selectedPlan.id),
       ])
@@ -155,6 +182,12 @@ export function InvestmentSimulator({
       if (rulesOutcome.status === "fulfilled") {
         setReceiptRules(rulesOutcome.value.data)
         setReceiptRulesError(null)
+        setForm((current) => ({
+          ...current,
+          retirementAge: current.retirementAge || String(
+            calculateMinimumRetirementAge(age, rulesOutcome.value.data),
+          ),
+        }))
       } else {
         setReceiptRules(null)
         setReceiptRulesError("Não foi possível carregar as opções de recebimento deste plano.")
@@ -177,6 +210,7 @@ export function InvestmentSimulator({
     setResult(null)
     setReceiptRules(null)
     setReceiptRulesError(null)
+    setForm((current) => ({ ...current, retirementAge: "" }))
     setError(null)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -440,6 +474,13 @@ function ResultStep({
   const maximumWithdrawal = withdrawalPercentage === null
     ? null
     : result.valorFuturoTotal * (withdrawalPercentage / 100)
+  const currentAge = Number(form.age)
+  const minimumRetirementAge = calculateMinimumRetirementAge(currentAge, receiptRules)
+  const selectedRetirementAge = Math.max(
+    Number(form.retirementAge) || minimumRetirementAge,
+    minimumRetirementAge,
+  )
+  const maximumRetirementAge = Math.max(90, minimumRetirementAge)
 
   return (
     <div>
@@ -478,6 +519,9 @@ function ResultStep({
           <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
             <CalendarDays className="size-4" aria-hidden="true" />
             Projeção para {formatDate(input.dataFim)}
+          </p>
+          <p className="mt-2 inline-flex rounded-full bg-action-soft px-3 py-1 font-label text-xs font-semibold text-action">
+            Aposentadoria aos {selectedRetirementAge} anos
           </p>
 
           <div className="mt-7 grid items-center gap-7 border-t border-border pt-6 sm:grid-cols-[160px_1fr]">
@@ -598,6 +642,33 @@ function ResultStep({
             </div>
             <div className="mt-4">
               <ParameterInput label="Rentabilidade anual" suffix="% a.a." value={form.annualReturn} onChange={(value) => onChange("annualReturn", value)} step="0.1" />
+            </div>
+            <div className="mt-6 border-t border-border pt-5">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <Label htmlFor="retirement-age">Idade de aposentadoria</Label>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                    A elegibilidade deste cenário começa aos {minimumRetirementAge} anos.
+                  </p>
+                </div>
+                <strong className="font-heading text-2xl font-semibold text-action">
+                  {selectedRetirementAge} anos
+                </strong>
+              </div>
+              <input
+                id="retirement-age"
+                type="range"
+                min={minimumRetirementAge}
+                max={maximumRetirementAge}
+                step="1"
+                value={selectedRetirementAge}
+                onChange={(event) => onChange("retirementAge", event.target.value)}
+                className="mt-4 w-full accent-[var(--vivest-color-surface-action)]"
+              />
+              <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                <span>{minimumRetirementAge} anos</span>
+                <span>{maximumRetirementAge} anos</span>
+              </div>
             </div>
             {error && <div className="mt-4"><ErrorMessage message={error} /></div>}
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">

@@ -18,6 +18,7 @@ export type InvestmentSimulationInput = {
   dataAdmissao?: string
   src: number
   rentabilidadeAnual: number
+  idadeAposentadoria?: number
   percentualEscolhido?: number
   fatorEscolhido?: number
 }
@@ -108,9 +109,18 @@ function resolveMinimumEligibilityDate(
     return latestDate(calculationStart, ageDate, vestingDate)
   })
 
-  return candidates.reduce((earliest, candidate) => (
+  const minimumEligibilityDate = candidates.reduce((earliest, candidate) => (
     candidate.getTime() < earliest.getTime() ? candidate : earliest
   ))
+
+  if (input.idadeAposentadoria === undefined) return minimumEligibilityDate
+
+  const chosenRetirementDate = addYears(
+    calculationStart,
+    Math.max(0, input.idadeAposentadoria - input.idadeAtual),
+  )
+
+  return latestDate(minimumEligibilityDate, chosenRetirementDate)
 }
 
 function exactMonthlyValue(

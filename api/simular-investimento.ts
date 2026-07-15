@@ -33,6 +33,7 @@ export const investmentSimulationSchema = z.object({
     .refine(isValidIsoDate, "Use uma data válida no formato AAAA-MM-DD.")
     .optional(),
   rentabilidade_anual: z.number().min(0),
+  idade_aposentadoria: z.number().int().min(0).max(120).optional(),
   tipo_contribuicao: z.string().trim().min(1).max(50).optional(),
   percentual_escolhido: z.number().min(0).max(100).optional(),
   fator_escolhido: z.number().min(0).optional(),
@@ -52,6 +53,17 @@ export const investmentSimulationSchema = z.object({
       code: "custom",
       path: ["data_admissao"],
       message: "A data de admissão não pode estar no futuro.",
+    })
+  }
+
+  if (
+    input.idade_aposentadoria !== undefined
+    && input.idade_aposentadoria < input.idade_atual
+  ) {
+    context.addIssue({
+      code: "custom",
+      path: ["idade_aposentadoria"],
+      message: "A idade de aposentadoria não pode ser menor que a idade atual.",
     })
   }
 })
@@ -196,6 +208,7 @@ export async function POST(request: Request) {
         dataAdmissao: parsed.data.data_admissao,
         src: parsed.data.src,
         rentabilidadeAnual: parsed.data.rentabilidade_anual,
+        idadeAposentadoria: parsed.data.idade_aposentadoria,
         percentualEscolhido: parsed.data.percentual_escolhido,
         fatorEscolhido: parsed.data.fator_escolhido,
       },

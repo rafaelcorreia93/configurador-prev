@@ -178,6 +178,7 @@ export type SimulacaoInvestimentoInput = {
   src: number
   data_admissao?: string
   rentabilidade_anual: number
+  idade_aposentadoria?: number
   tipo_contribuicao?: string
   percentual_escolhido?: number
   fator_escolhido?: number

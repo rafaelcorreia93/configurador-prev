@@ -95,6 +95,42 @@ describe("buildOpenInvestmentCalculationInput", () => {
     })
   })
 
+  it("permite postergar a projeção para a idade de aposentadoria escolhida", () => {
+    const result = buildOpenInvestmentCalculationInput(
+      {
+        idadeAtual: 50,
+        idadeAposentadoria: 65,
+        dataAdesao: "2024-01-15",
+        src: 10_000,
+        rentabilidadeAnual: 0.04,
+      },
+      configuration(),
+      null,
+      retirementRules,
+      new Date("2026-07-15T12:00:00.000Z"),
+    )
+
+    expect(result.dataFim).toBe("2041-07-15")
+  })
+
+  it("não permite que a escolha antecipe a elegibilidade mínima", () => {
+    const result = buildOpenInvestmentCalculationInput(
+      {
+        idadeAtual: 50,
+        idadeAposentadoria: 55,
+        dataAdesao: "2024-01-15",
+        src: 10_000,
+        rentabilidadeAnual: 0.04,
+      },
+      configuration(),
+      null,
+      retirementRules,
+      new Date("2026-07-15T12:00:00.000Z"),
+    )
+
+    expect(result.dataFim).toBe("2036-07-15")
+  })
+
   it("usa a data de admissão nas regras de idade e tempo de serviço", () => {
     const result = buildOpenInvestmentCalculationInput(
       {
