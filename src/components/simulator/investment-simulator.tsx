@@ -16,8 +16,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ApiClientError, simularInvestimento } from "@/lib/api"
-import type { CalculoInvestimentoResponse, Plano } from "@/types/api"
+import {
+  ApiClientError,
+  obterRegrasRecebimento,
+  simularInvestimento,
+} from "@/lib/api"
+import type {
+  CalculoInvestimentoResponse,
+  Plano,
+  RegrasRecebimento,
+} from "@/types/api"
 
 type SimulatorStep = "questions" | "result"
 
@@ -77,6 +85,8 @@ export function InvestmentSimulator({
   const [step, setStep] = useState<SimulatorStep>("questions")
   const [form, setForm] = useState<SimulationForm>(initialForm)
   const [result, setResult] = useState<CalculoInvestimentoResponse | null>(null)
+  const [receiptRules, setReceiptRules] = useState<RegrasRecebimento | null>(null)
+  const [receiptRulesError, setReceiptRulesError] = useState<string | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const availablePlans = useMemo(
@@ -107,6 +117,11 @@ export function InvestmentSimulator({
       return
     }
 
+    if (!selectedPlan) {
+      setError("O plano selecionado não está disponível para simulação.")
+      return
+    }
+
     if (!Number.isInteger(age) || age > 120) {
       setError("Informe uma idade válida em anos completos.")
       return
@@ -122,16 +137,28 @@ export function InvestmentSimulator({
 
     try {
       const today = todayAsIsoDate()
-      const simulation = await simularInvestimento({
-        cod_plano: form.planCode,
-        idade_atual: age,
-        data_adesao: today,
-        data_admissao: today,
-        src: salary,
-        rentabilidade_anual: annualReturn / 100,
-      })
+      const [simulationOutcome, rulesOutcome] = await Promise.allSettled([
+        simularInvestimento({
+          cod_plano: form.planCode,
+          idade_atual: age,
+          data_adesao: today,
+          data_admissao: today,
+          src: salary,
+          rentabilidade_anual: annualReturn / 100,
+        }),
+        obterRegrasRecebimento(selectedPlan.id),
+      ])
 
-      setResult(simulation)
+      if (simulationOutcome.status === "rejected") throw simulationOutcome.reason
+
+      setResult(simulationOutcome.value)
+      if (rulesOutcome.status === "fulfilled") {
+        setReceiptRules(rulesOutcome.value.data)
+        setReceiptRulesError(null)
+      } else {
+        setReceiptRules(null)
+        setReceiptRulesError("Não foi possível carregar as opções de recebimento deste plano.")
+      }
       setStep("result")
       window.scrollTo({ top: 0, behavior: "smooth" })
     } catch (simulationError) {
@@ -148,6 +175,8 @@ export function InvestmentSimulator({
   function restart() {
     setStep("questions")
     setResult(null)
+    setReceiptRules(null)
+    setReceiptRulesError(null)
     setError(null)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
@@ -173,6 +202,8 @@ export function InvestmentSimulator({
             form={form}
             plan={selectedPlan}
             result={result}
+            receiptRules={receiptRules}
+            receiptRulesError={receiptRulesError}
             isSimulating={isSimulating}
             error={error}
             onChange={updateForm}
@@ -350,6 +381,8 @@ function ResultStep({
   form,
   plan,
   result,
+  receiptRules,
+  receiptRulesError,
   isSimulating,
   error,
   onChange,
@@ -359,6 +392,8 @@ function ResultStep({
   form: SimulationForm
   plan: Plano
   result: CalculoInvestimentoResponse
+  receiptRules: RegrasRecebimento | null
+  receiptRulesError: string | null
   isSimulating: boolean
   error: string | null
   onChange: (field: keyof SimulationForm, value: string) => void
@@ -376,6 +411,35 @@ function ResultStep({
   const chartStyle = {
     background: `conic-gradient(var(--vivest-color-surface-action) 0 ${participantEnd}%, var(--vivest-color-surface-action-error) ${participantEnd}% ${companyEnd}%, #2f94ad ${companyEnd}% 100%)`,
   }
+  const [withdrawInitial, setWithdrawInitial] = useState(false)
+  const fixedIncome = receiptRules?.configuracaoRenda.modalidades.find(
+    (modality) => modality.modalidadeTipo === "valor_fixo" && modality.ativo,
+  )
+  const minimumUnits = receiptRules?.limitesPagamento.rendaMensalMinimaUnidade ?? null
+  const referenceUnitValue = plan.unidadeReferencia === null
+    ? null
+    : Number(plan.unidadeReferencia.valorAtual)
+  const minimumBenefit = minimumUnits !== null && referenceUnitValue !== null
+    ? minimumUnits * referenceUnitValue
+    : null
+  const maximumPercentage = fixedIncome?.percentualMaxSaldoValorFixo ?? null
+  const maximumBenefit = maximumPercentage === null
+    ? null
+    : result.valorFuturoTotal * (maximumPercentage / 100)
+  const benefitRangeAvailable = minimumBenefit !== null
+    && maximumBenefit !== null
+    && maximumBenefit >= minimumBenefit
+  const [monthlyBenefit, setMonthlyBenefit] = useState(minimumBenefit ?? 0)
+  const displayedMonthlyBenefit = minimumBenefit !== null && maximumBenefit !== null
+    ? Math.min(Math.max(monthlyBenefit || minimumBenefit, minimumBenefit), maximumBenefit)
+    : 0
+  const sliderStep = minimumBenefit !== null && maximumBenefit !== null
+    ? Math.max((maximumBenefit - minimumBenefit) / 100, 0.01)
+    : 0.01
+  const withdrawalPercentage = receiptRules?.configuracaoRenda.percentualMaxSaque ?? null
+  const maximumWithdrawal = withdrawalPercentage === null
+    ? null
+    : result.valorFuturoTotal * (withdrawalPercentage / 100)
 
   return (
     <div>
@@ -430,6 +494,84 @@ function ResultStep({
               <ChartLegend color="bg-error" label="Contribuições da empresa" value={totalCompany} />
               <ChartLegend color="bg-[#2f94ad]" label="Rendimentos" value={earnings} />
             </div>
+          </div>
+
+          <div className="mt-7 border-t border-border pt-6">
+            <p className="font-label text-xs font-semibold uppercase tracking-[0.15em] text-action">Opções de recebimento</p>
+            <h2 className="mt-2 font-heading text-xl font-semibold text-foreground">Como você poderá receber</h2>
+
+            {receiptRulesError ? (
+              <div className="mt-5"><ErrorMessage message={receiptRulesError} /></div>
+            ) : receiptRules ? (
+              <div className="mt-5 space-y-6">
+                {receiptRules.configuracaoRenda.permiteSaqueInicial && withdrawalPercentage !== null && (
+                  <div className="rounded-[var(--vivest-radius-2)] border border-border p-4">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                      <div>
+                        <p className="font-label text-sm font-semibold text-foreground">Saque inicial de até {withdrawalPercentage.toLocaleString("pt-BR")}%</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          Limite estimado de {currencyFormatter.format(maximumWithdrawal ?? 0)}.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 rounded-[var(--vivest-radius-2)] bg-action-soft p-1" role="group" aria-label="Deseja realizar o saque inicial?">
+                        <Button type="button" size="sm" variant={withdrawInitial ? "default" : "ghost"} onClick={() => setWithdrawInitial(true)}>Sim</Button>
+                        <Button type="button" size="sm" variant={!withdrawInitial ? "default" : "ghost"} onClick={() => setWithdrawInitial(false)}>Não</Button>
+                      </div>
+                    </div>
+                    {withdrawInitial && (
+                      <p className="mt-3 rounded-[var(--vivest-radius-1)] bg-action-soft px-3 py-2 text-xs text-action">
+                        Você poderá escolher o valor do saque, respeitando o limite máximo, no momento da concessão.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {fixedIncome && minimumBenefit !== null && maximumBenefit !== null ? (
+                  <div>
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                      <div>
+                        <p className="font-label text-sm font-semibold text-foreground">Renda mensal em valor fixo</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          Escolha uma renda entre o mínimo regulamentar e {maximumPercentage?.toLocaleString("pt-BR")}% do saldo projetado.
+                        </p>
+                      </div>
+                      <strong className="font-heading text-2xl font-semibold text-action">
+                        {currencyFormatter.format(benefitRangeAvailable ? displayedMonthlyBenefit : maximumBenefit)}
+                      </strong>
+                    </div>
+
+                    {benefitRangeAvailable ? (
+                      <>
+                        <input
+                          type="range"
+                          min={minimumBenefit}
+                          max={maximumBenefit}
+                          step={sliderStep}
+                          value={displayedMonthlyBenefit}
+                          onChange={(event) => setMonthlyBenefit(Number(event.target.value))}
+                          className="benefit-slider mt-5 w-full accent-[var(--vivest-color-surface-action)]"
+                          aria-label="Valor da renda mensal"
+                        />
+                        <div className="mt-2 flex justify-between gap-4 text-xs text-muted-foreground">
+                          <span>
+                            Mínimo: {currencyFormatter.format(minimumBenefit)} · {minimumUnits?.toLocaleString("pt-BR")} {receiptRules.limitesPagamento.unidadeRendaMinima}
+                          </span>
+                          <span className="text-right">Máximo: {currencyFormatter.format(maximumBenefit)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="mt-4 rounded-[var(--vivest-radius-2)] bg-warning p-4 text-sm text-warning-foreground">
+                        O saldo projetado não alcança a renda mensal mínima de {currencyFormatter.format(minimumBenefit)}.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="rounded-[var(--vivest-radius-2)] bg-action-soft p-4 text-sm text-muted-foreground">
+                    Este plano não possui uma modalidade de renda mensal fixa completamente configurada.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
         </ProjectionCard>
       </div>

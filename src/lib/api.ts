@@ -1,6 +1,7 @@
 import type {
   CalculoInvestimentoInput,
   CalculoInvestimentoResponse,
+  RegrasRecebimentoResponse,
   SimulacaoInvestimentoInput,
 } from "@/types/api"
 
@@ -63,4 +64,9 @@ export function simularInvestimento(input: SimulacaoInvestimentoInput) {
     method: "POST",
     body: JSON.stringify(input),
   })
+}
+
+export function obterRegrasRecebimento(planoId: string) {
+  const params = new URLSearchParams({ planoId })
+  return apiRequest<RegrasRecebimentoResponse>(`/api/regras-recebimento?${params}`)
 }
