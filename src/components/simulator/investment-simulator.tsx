@@ -126,8 +126,8 @@ export function InvestmentSimulator({
       ? null
       : Number(form.retirementAge)
 
-    if (!form.planCode || age === null || salary === null) {
-      setError("Preencha o plano, a idade e o salário para continuar.")
+    if (!form.planCode || age === null || salary === null || informedRetirementAge === null) {
+      setError("Preencha o plano, as idades e o salário para continuar.")
       return
     }
 
@@ -148,9 +148,13 @@ export function InvestmentSimulator({
 
     if (
       informedRetirementAge !== null
-      && (!Number.isInteger(informedRetirementAge) || informedRetirementAge > 120)
+      && (
+        !Number.isInteger(informedRetirementAge)
+        || informedRetirementAge < age
+        || informedRetirementAge > 120
+      )
     ) {
-      setError("Informe uma idade de aposentadoria válida.")
+      setError("A idade de aposentadoria deve ser igual ou maior que a idade atual.")
       return
     }
 
@@ -184,9 +188,10 @@ export function InvestmentSimulator({
         setReceiptRulesError(null)
         setForm((current) => ({
           ...current,
-          retirementAge: current.retirementAge || String(
+          retirementAge: String(Math.max(
+            Number(current.retirementAge),
             calculateMinimumRetirementAge(age, rulesOutcome.value.data),
-          ),
+          )),
         }))
       } else {
         setReceiptRules(null)
@@ -373,6 +378,26 @@ function QuestionsStep({
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="simulation-retirement-age">Com qual idade você pretende se aposentar?</Label>
+                <div className="relative">
+                  <CalendarDays className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                  <Input
+                    id="simulation-retirement-age"
+                    type="number"
+                    min={form.age || "1"}
+                    max="120"
+                    step="1"
+                    inputMode="numeric"
+                    placeholder="Ex.: 65"
+                    value={form.retirementAge}
+                    onChange={(event) => onChange("retirementAge", event.target.value)}
+                    className="h-12 pl-10"
+                  />
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">A idade mínima prevista no regulamento do plano será respeitada.</p>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="simulation-salary">Qual é o seu salário mensal?</Label>
                 <div className="relative">
                   <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 font-label text-sm font-semibold text-muted-foreground">R$</span>
