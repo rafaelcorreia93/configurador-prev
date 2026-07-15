@@ -170,3 +170,15 @@ export type CalculoInvestimentoResponse = {
     decimosAplicados: number
   }
 }
+
+export type SimulacaoInvestimentoInput = {
+  cod_plano: string
+  idade_atual: number
+  data_adesao: string
+  src: number
+  data_admissao?: string
+  rentabilidade_anual: number
+  tipo_contribuicao?: string
+  percentual_escolhido?: number
+  fator_escolhido?: number
+}

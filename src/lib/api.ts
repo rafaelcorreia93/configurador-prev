@@ -1,6 +1,7 @@
 import type {
   CalculoInvestimentoInput,
   CalculoInvestimentoResponse,
+  SimulacaoInvestimentoInput,
 } from "@/types/api"
 
 type ApiErrorPayload = {
@@ -52,6 +53,13 @@ export async function apiRequest<T>(path: string, options?: RequestInit): Promis
 
 export function calcularInvestimento(input: CalculoInvestimentoInput) {
   return apiRequest<CalculoInvestimentoResponse>("/api/calcular-investimento", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
+export function simularInvestimento(input: SimulacaoInvestimentoInput) {
+  return apiRequest<CalculoInvestimentoResponse>("/api/simular-investimento", {
     method: "POST",
     body: JSON.stringify(input),
   })

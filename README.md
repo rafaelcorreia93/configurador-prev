@@ -23,6 +23,11 @@ O endpoint `POST /api/calcular-investimento` autentica na Vivest e encaminha os
 dados abertos da simulação para a API de cálculo. A resposta mantém o contrato da
 API externa, pronta para ser consumida pelo futuro front de simulação.
 
+O endpoint `POST /api/simular-investimento` recebe os dados do participante,
+aplica as regras de contribuição e de elegibilidade do plano e usa o resultado
+para chamar a API aberta. Para contribuições configuradas como faixa, o mínimo é
+usado quando o participante não informa uma escolha.
+
 ## Validação
 
 ```bash
