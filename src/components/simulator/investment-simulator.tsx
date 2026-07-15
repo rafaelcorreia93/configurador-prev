@@ -315,7 +315,7 @@ function QuestionsStep({
                     id="simulation-salary"
                     type="number"
                     min="1"
-                    step="100"
+                    step="0.01"
                     inputMode="decimal"
                     placeholder="Ex.: 8.000"
                     value={form.salary}
@@ -452,7 +452,7 @@ function ResultStep({
             <h2 className="mt-2 font-heading text-2xl font-semibold text-foreground">Teste outro cenário</h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <ParameterInput label="Idade atual" suffix="anos" value={form.age} onChange={(value) => onChange("age", value)} />
-              <ParameterInput label="Salário mensal" prefix="R$" value={form.salary} onChange={(value) => onChange("salary", value)} step="100" />
+              <ParameterInput label="Salário mensal" prefix="R$" value={form.salary} onChange={(value) => onChange("salary", value)} step="0.01" />
             </div>
             <div className="mt-4">
               <ParameterInput label="Rentabilidade anual" suffix="% a.a." value={form.annualReturn} onChange={(value) => onChange("annualReturn", value)} step="0.1" />
