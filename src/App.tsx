@@ -14,6 +14,7 @@ import { ConfigurationDialog } from "@/components/configurations/configuration-d
 import { PlanFormDialog } from "@/components/plans/plan-form-dialog"
 import { PlansList } from "@/components/plans/plans-list"
 import { ReceiptRulesDialog } from "@/components/receipt-rules/receipt-rules-dialog"
+import { InvestmentSimulator } from "@/components/simulator/investment-simulator"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,8 +29,12 @@ import type {
 
 type HealthStatus = "checking" | "connected" | "unavailable"
 type CatalogStatus = "loading" | "ready" | "error"
+type ActiveArea = "simulator" | "admin"
 
 function App() {
+  const [activeArea, setActiveArea] = useState<ActiveArea>(
+    () => window.location.hash === "#admin" ? "admin" : "simulator",
+  )
   const [healthStatus, setHealthStatus] = useState<HealthStatus>("checking")
   const [availableTables, setAvailableTables] = useState<number | null>(null)
   const [expectedTables, setExpectedTables] = useState(7)
@@ -113,24 +118,60 @@ function App() {
     void loadCatalog()
   }
 
+  function navigateTo(area: ActiveArea) {
+    setActiveArea(area)
+    window.history.replaceState(null, "", area === "admin" ? "#admin" : "#simulador")
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
   return (
     <div className="min-h-screen bg-page text-foreground">
       <header className="border-b border-border bg-card">
-        <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-6 px-6 lg:px-8">
+        <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-5">
-            <img src={logoVivest} alt="Vivest" className="h-9 w-auto" />
+            <img src={logoVivest} alt="Vivest" className="h-auto w-[92px] shrink-0 sm:h-9 sm:w-auto" />
             <span className="hidden h-8 w-px bg-border sm:block" aria-hidden="true" />
             <span className="hidden font-heading text-base font-semibold text-foreground sm:block">
-              Configurador PREV
+              {activeArea === "admin" ? "Configurador PREV" : "Simulador PREV"}
             </span>
           </div>
-          <Badge variant={healthContent.variant} aria-live="polite">
-            {healthContent.icon}
-            {healthContent.label}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <nav className="flex items-center rounded-[var(--vivest-radius-2)] bg-action-soft p-1" aria-label="Áreas da aplicação">
+              <Button
+                variant={activeArea === "simulator" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => navigateTo("simulator")}
+                aria-current={activeArea === "simulator" ? "page" : undefined}
+              >
+                Simulador
+              </Button>
+              <Button
+                variant={activeArea === "admin" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => navigateTo("admin")}
+                aria-current={activeArea === "admin" ? "page" : undefined}
+              >
+                <span className="sm:hidden">Admin</span>
+                <span className="hidden sm:inline">Administração</span>
+              </Button>
+            </nav>
+            {activeArea === "admin" && (
+              <Badge className="hidden lg:inline-flex" variant={healthContent.variant} aria-live="polite">
+                {healthContent.icon}
+                {healthContent.label}
+              </Badge>
+            )}
+          </div>
         </div>
       </header>
 
+      {activeArea === "simulator" ? (
+        <InvestmentSimulator
+          planos={planos}
+          loadingPlans={catalogStatus === "loading"}
+          plansError={catalogStatus === "error" ? catalogError : null}
+        />
+      ) : (
       <main className="mx-auto max-w-7xl px-6 py-10 lg:px-8 lg:py-14">
         <section className="mb-10 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <div className="max-w-3xl">
@@ -201,32 +242,33 @@ function App() {
           />
         </section>
       </main>
+      )}
 
-      <PlanFormDialog
+      {activeArea === "admin" && <PlanFormDialog
         open={isPlanDialogOpen}
         onOpenChange={setIsPlanDialogOpen}
         unidades={unidades}
         onUnidadeCreated={handleUnidadeCreated}
         onPlanoCreated={() => loadCatalog()}
-      />
+      />}
 
-      <ConfigurationDialog
+      {activeArea === "admin" && <ConfigurationDialog
         plano={configurationPlan}
         open={configurationPlan !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setConfigurationPlan(null)
         }}
         onSaved={() => loadCatalog()}
-      />
+      />}
 
-      <ReceiptRulesDialog
+      {activeArea === "admin" && <ReceiptRulesDialog
         plano={receiptPlan}
         open={receiptPlan !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setReceiptPlan(null)
         }}
         onSaved={() => loadCatalog()}
-      />
+      />}
     </div>
   )
 }
